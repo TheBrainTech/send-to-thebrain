@@ -1,0 +1,37 @@
+{
+	"name": "send-to-thebrain",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"description": "Chrome browser extension that saves the active page into TheBrain via the desktop app's local HTTP API.",
+	"license": "MIT",
+	"scripts": {
+		"dev": "vite",
+		"icons": "node scripts/generate-icons.mjs",
+		"build": "tsc --noEmit && vite build",
+		"test": "vitest run",
+		"test:watch": "vitest"
+	},
+	"dependencies": {
+		"class-variance-authority": "^0.7.1",
+		"clsx": "^2.1.1",
+		"react": "^18.3.1",
+		"react-dom": "^18.3.1",
+		"tailwind-merge": "^2.5.5"
+	},
+	"devDependencies": {
+		"@crxjs/vite-plugin": "^2.0.0-beta.28",
+		"@types/chrome": "^0.0.287",
+		"@types/node": "^22.10.0",
+		"@types/react": "^18.3.12",
+		"@types/react-dom": "^18.3.1",
+		"@vitejs/plugin-react": "^4.3.4",
+		"autoprefixer": "^10.4.20",
+		"postcss": "^8.4.49",
+		"sharp": "^0.33.5",
+		"tailwindcss": "^3.4.17",
+		"typescript": "^5.7.2",
+		"vite": "^5.4.11",
+		"vitest": "^2.1.8"
+	}
+}

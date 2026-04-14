@@ -1,0 +1,96 @@
+/**
+ * Design tokens mirrored from TheBrainWebsite (OKLCH palette, shadcn-compatible).
+ * Kept as a standalone file so the extension is self-contained — if you update
+ * the marketing site's palette, copy the relevant values here.
+ */
+
+:root,
+[data-theme="light"] {
+	--color-background: oklch(0.9309 0.0094 265);
+	--color-foreground: oklch(15% 0.15 265);
+
+	--color-card: oklch(0.9544 0.0173 265);
+	--color-card-foreground: oklch(5% 0.15 265);
+
+	--color-primary: oklch(57% 0.25 265);
+	--color-primary-foreground: oklch(100% 0 0);
+
+	--color-secondary: oklch(96.83% 0.0069 247.9);
+	--color-secondary-foreground: oklch(5% 0.15 265);
+
+	--color-brand: oklch(57% 0.25 265);
+	--color-brand-foreground: oklch(100% 0 0);
+
+	--color-muted: oklch(70% 0.01 265 / 50%);
+	--color-muted-foreground: oklch(52% 0.01 250);
+
+	--color-destructive: oklch(55% 0.22 25);
+	--color-destructive-foreground: oklch(100% 0 0);
+
+	--color-success: oklch(55% 0.16 145);
+	--color-success-foreground: oklch(100% 0 0);
+
+	--color-warning: oklch(70% 0.15 70);
+	--color-warning-foreground: oklch(0% 0 0);
+
+	--color-info: oklch(60% 0.12 210);
+	--color-info-foreground: oklch(100% 0 0);
+
+	--color-border: oklch(40% 0.0094 265 / 20%);
+	--color-input: oklch(75% 0.01 265);
+	--color-ring: oklch(57% 0.25 265);
+
+	--radius: 0.5rem;
+}
+
+@media (prefers-color-scheme: dark) {
+	:root:not([data-theme="light"]) {
+		--color-background: oklch(12.96% 0.0274 265);
+		--color-foreground: oklch(100% 0 0);
+
+		--color-card: oklch(15% 0.0861 265);
+		--color-card-foreground: oklch(100% 0 0);
+
+		--color-primary: oklch(57% 0.25 265);
+		--color-primary-foreground: oklch(100% 0 0);
+
+		--color-secondary: oklch(25% 0.0587 265);
+		--color-secondary-foreground: oklch(100% 0 0);
+
+		--color-muted: oklch(50% 0.0207 265 / 50%);
+		--color-muted-foreground: oklch(55.1% 0.0234 265);
+
+		--color-destructive: oklch(62% 0.23 25);
+		--color-success: oklch(65% 0.18 145);
+		--color-warning: oklch(78% 0.15 75);
+		--color-info: oklch(80% 0.15 210);
+
+		--color-border: oklch(60% 0.0287 265 / 50%);
+		--color-input: oklch(40% 0.08 265.24);
+	}
+}
+
+[data-theme="dark"] {
+	--color-background: oklch(12.96% 0.0274 265);
+	--color-foreground: oklch(100% 0 0);
+
+	--color-card: oklch(15% 0.0861 265);
+	--color-card-foreground: oklch(100% 0 0);
+
+	--color-primary: oklch(57% 0.25 265);
+	--color-primary-foreground: oklch(100% 0 0);
+
+	--color-secondary: oklch(25% 0.0587 265);
+	--color-secondary-foreground: oklch(100% 0 0);
+
+	--color-muted: oklch(50% 0.0207 265 / 50%);
+	--color-muted-foreground: oklch(55.1% 0.0234 265);
+
+	--color-destructive: oklch(62% 0.23 25);
+	--color-success: oklch(65% 0.18 145);
+	--color-warning: oklch(78% 0.15 75);
+	--color-info: oklch(80% 0.15 210);
+
+	--color-border: oklch(60% 0.0287 265 / 50%);
+	--color-input: oklch(40% 0.08 265.24);
+}

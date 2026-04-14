@@ -1,0 +1,38 @@
+{
+	"manifest_version": 3,
+	"name": "Send to TheBrain",
+	"version": "0.1.0",
+	"description": "Save the current page as a thought in your Brain.",
+	"action": {
+		"default_popup": "src/popup/index.html",
+		"default_title": "Send to TheBrain",
+		"default_icon": {
+			"16": "public/icons/icon-16.png",
+			"32": "public/icons/icon-32.png",
+			"48": "public/icons/icon-48.png",
+			"128": "public/icons/icon-128.png"
+		}
+	},
+	"options_page": "src/options/index.html",
+	"permissions": ["activeTab", "storage"],
+	"host_permissions": [
+		"http://localhost/*",
+		"http://localhost:*/*",
+		"https://localhost/*",
+		"https://localhost:*/*",
+		"http://127.0.0.1/*",
+		"http://127.0.0.1:*/*",
+		"https://127.0.0.1/*",
+		"https://127.0.0.1:*/*"
+	],
+	"icons": {
+		"16": "public/icons/icon-16.png",
+		"32": "public/icons/icon-32.png",
+		"48": "public/icons/icon-48.png",
+		"128": "public/icons/icon-128.png"
+	},
+	"background": {
+		"service_worker": "src/background/service-worker.ts",
+		"type": "module"
+	}
+}
