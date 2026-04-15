@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" viewBox="0 0 178 178" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.5;">
+    <path d="M178,35.536L178,142.464C178,162.077 162.077,178 142.464,178L35.536,178C15.923,178 0,162.077 0,142.464L0,35.536C0,15.923 15.923,0 35.536,0L142.464,0C162.077,0 178,15.923 178,35.536Z" style="fill:rgb(8,29,87);"/>
+    <g id="Logomark-Mono" transform="matrix(0.413631,0,0,0.413631,-109.542822,-179.860071)">
+        <g id="Mono">
+            <path id="Logomark-Mono1" serif:id="Logomark-Mono" d="M420,650C420,677.596 397.596,700 370,700L350,700C322.404,700 300,677.596 300,650C300,622.404 322.404,600 350,600L370,600C397.596,600 420,622.404 420,650ZM470,600C442.404,600 420,577.596 420,550C420,522.404 442.404,500 470,500L490,500C517.596,500 540,522.404 540,550C540,577.596 562.404,600 590,600L610,600C637.596,600 660,622.404 660,650C660,677.596 637.596,700 610,700L590,700C562.404,700 540,722.404 540,750C540,777.596 517.596,800 490,800L470,800C442.404,800 420,777.596 420,750C420,722.404 442.404,700 470,700L490,700C517.596,700 540,677.596 540,650C540,622.404 517.596,600 490,600L470,600Z" style="fill:none;stroke:white;stroke-width:17.46px;"/>
+        </g>
+    </g>
+</svg>
