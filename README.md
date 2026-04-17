@@ -35,7 +35,93 @@ build-time magic beyond `@crxjs/vite-plugin`.
 - Options page for updating the endpoint / API key and setting defaults
   for the send mode and post-save activation.
 
+## Getting started
+
+This version of the extension is published as source code so developers and
+tinkerers can experiment with it and adapt it to their own workflows — change
+the UI, tweak how titles are split, add a new send mode, whatever you like.
+To use it you'll build it yourself and load it into your browser. If you're
+not a developer, don't worry — the steps below walk through it end-to-end.
+You'll install one free tool (Node.js), download the code, and run three
+short commands.
+
+### 1. Install Node.js
+
+The extension is built using **Node.js**, a free tool that includes a
+command-line program called `npm`. `npm` downloads the small libraries this
+project depends on and produces the finished extension files your browser
+can load.
+
+1. Go to [nodejs.org](https://nodejs.org/) and download the **LTS** installer
+   for your operating system.
+2. Run the installer and accept the default options.
+3. Confirm it worked: open a terminal window (**Terminal** on macOS/Linux,
+   **PowerShell** on Windows) and run:
+   ```
+   node --version
+   npm --version
+   ```
+   Each should print a version number. If they don't, close and reopen the
+   terminal window and try again.
+
+### 2. Download the code
+
+On this GitHub page:
+
+1. Click the green **Code** button near the top of the file list.
+2. Choose **Download ZIP**.
+3. Unzip the file somewhere easy to find — your `Documents` folder or
+   `Desktop` are both fine. Once unzipped you'll have a folder named
+   something like `send-to-thebrain-main`.
+
+If you already use `git`, you can clone instead:
+
+```bash
+git clone https://github.com/TheBrainTech/send-to-thebrain.git
+```
+
+### 3. Build the extension
+
+Open your terminal and change into the folder you just unzipped. For example,
+if you unzipped it onto your Desktop:
+
+```bash
+cd ~/Desktop/send-to-thebrain-main          # macOS / Linux
+cd %USERPROFILE%\Desktop\send-to-thebrain-main   # Windows PowerShell
+```
+
+Then run these three commands, one at a time:
+
+```bash
+npm install      # downloads the libraries this project depends on
+npm run icons    # generates the toolbar icon PNGs from the logo
+npm run build    # produces the finished extension in a new "dist" folder
+```
+
+The first command can take a minute or two the first time — it's fetching
+everything the project needs. When all three finish without errors, you'll
+have a `dist/` folder inside your project folder. That's the extension.
+
+### 4. Load the extension into your browser
+
+**Chrome / Edge / Brave:**
+
+1. Open `chrome://extensions` in the browser.
+2. Turn on **Developer mode** (toggle in the top-right).
+3. Click **Load unpacked** and choose the `dist/` folder from step 3.
+
+**Firefox:** see [Porting to Firefox / Safari](#porting-to-firefox--safari)
+below.
+
+You'll see the "Send to TheBrain" icon appear in your browser toolbar. Click
+it and the popup will walk you through the one-time connection setup
+described next.
+
 ## Connecting to the desktop app
+
+The extension talks to TheBrain's desktop app over your own computer — nothing
+leaves your machine. You'll copy two short values out of the desktop app and
+paste them into the extension once.
 
 1. Start the TheBrain desktop app.
 2. Go to **Settings → User → Local API**.
@@ -46,25 +132,13 @@ build-time magic beyond `@crxjs/vite-plugin`.
 
 The API key belongs to a single user — whichever user generated it.
 
-## Build
+## Updating to a newer version
 
-```bash
-npm install
-npm run icons    # rasterize public/logo.svg into the manifest PNG sizes
-npm run build    # outputs to dist/
-```
-
-Load the unpacked extension:
-
-1. Visit `chrome://extensions`.
-2. Enable Developer mode.
-3. Click **Load unpacked** and choose the `dist/` folder.
-
-For local development:
-
-```bash
-npm run dev
-```
+When a new version of the code is published here, repeat steps 2 and 3
+(download the ZIP again, then `npm install` and `npm run build`). Then go to
+`chrome://extensions` and click the circular **reload** arrow on the "Send to
+TheBrain" card. Your API key and settings are stored by the browser and will
+carry over.
 
 ## Tests
 
@@ -96,6 +170,11 @@ src/
 ├── styles/          Tailwind entrypoint + OKLCH tokens
 └── background/      Placeholder MV3 service worker
 ```
+
+## Local development
+
+If you want to tinker with the code, `npm run dev` starts Vite in watch mode
+so the extension rebuilds on save.
 
 ## Porting to Firefox / Safari
 
