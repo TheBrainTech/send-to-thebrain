@@ -35,8 +35,13 @@ const EXTRA_SPLITTERS: readonly string[] = [
 
 const REVERSE_SPLITTERS: readonly string[] = [": "];
 
+// Sites like Gmail, YouTube, Twitter/X, Slack, Substack prefix the document
+// title with an unread-notification count like "(19) ". Strip it so the
+// count does not end up in the thought name.
+const UNREAD_COUNT_PREFIX = /^\s*\(\d+\)\s*/;
+
 function normalize(title: string): string {
-	return title.replace(/\u00A0/g, " ");
+	return title.replace(/\u00A0/g, " ").replace(UNREAD_COUNT_PREFIX, "");
 }
 
 export function trimTitleMetadata(rawTitle: string): string {

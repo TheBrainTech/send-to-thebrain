@@ -55,4 +55,25 @@ describe("splitTitle", () => {
 		expect(trimTitleMetadata("X | Y")).toBe("X");
 		expect(getTitleMetadata("X | Y")).toBe("Y");
 	});
+
+	it("strips leading unread-count prefix like (19)", () => {
+		expect(splitTitle("(19) My Prodigal Brainchild - Neal Stephenson")).toEqual({
+			name: "My Prodigal Brainchild",
+			label: "Neal Stephenson",
+		});
+	});
+
+	it("strips unread-count prefix when there is no other splitter", () => {
+		expect(splitTitle("(20) YouTube")).toEqual({
+			name: "YouTube",
+			label: "",
+		});
+	});
+
+	it("leaves parenthesized non-numeric prefixes alone", () => {
+		expect(splitTitle("(Draft) My Post - My Blog")).toEqual({
+			name: "(Draft) My Post",
+			label: "My Blog",
+		});
+	});
 });
