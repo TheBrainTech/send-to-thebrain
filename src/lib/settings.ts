@@ -16,7 +16,10 @@ export interface Settings {
 	// trimQueryParams is on, because the query carries page identity (e.g.
 	// YouTube's ?v=VIDEO_ID). Entries are bare hostnames; subdomains match.
 	trimQueryParamsExceptions: string[];
+	autoProceed: boolean;
 }
+
+export const AUTO_PROCEED_MS = 3000;
 
 export const DEFAULT_TRIM_EXCEPTIONS: readonly string[] = [
 	"youtube.com",
@@ -30,6 +33,7 @@ const DEFAULTS: Settings = {
 	activateAfterSend: true,
 	trimQueryParams: false,
 	trimQueryParamsExceptions: [...DEFAULT_TRIM_EXCEPTIONS],
+	autoProceed: false,
 };
 
 const KEYS: (keyof Settings)[] = [
@@ -39,6 +43,7 @@ const KEYS: (keyof Settings)[] = [
 	"activateAfterSend",
 	"trimQueryParams",
 	"trimQueryParamsExceptions",
+	"autoProceed",
 ];
 
 export async function getSettings(): Promise<Settings> {
@@ -63,6 +68,10 @@ export async function getSettings(): Promise<Settings> {
 					(v): v is string => typeof v === "string",
 				)
 			: [...DEFAULTS.trimQueryParamsExceptions],
+		autoProceed:
+			typeof stored.autoProceed === "boolean"
+				? stored.autoProceed
+				: DEFAULTS.autoProceed,
 	};
 }
 

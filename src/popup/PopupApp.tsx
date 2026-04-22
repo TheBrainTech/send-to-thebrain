@@ -11,7 +11,13 @@ import { tabs, runtime, type ActiveTab } from "../lib/browser";
 import { DEFAULT_ENDPOINT, isValidEndpoint } from "../lib/endpoint";
 import { sendToBrain, type SendOutcome } from "../lib/sendToBrain";
 import { stripUnreadCountPrefix } from "../lib/titleSplit";
-import { getSettings, updateSettings, type SendMode, type Settings } from "../lib/settings";
+import {
+	AUTO_PROCEED_MS,
+	getSettings,
+	updateSettings,
+	type SendMode,
+	type Settings,
+} from "../lib/settings";
 import { hasQueryOrHash, isTrimException, stripQueryAndHash } from "../lib/urlTrim";
 
 interface ActiveThought {
@@ -36,6 +42,7 @@ export function PopupApp() {
 	const [tab, setTab] = useState<ActiveTab | null>(null);
 	const [activeThought, setActiveThought] = useState<ActiveThought | null>(null);
 	const [view, setView] = useState<ViewState>({ kind: "loading" });
+	const [autoProceedActive, setAutoProceedActive] = useState(false);
 
 	// Verify that the desktop app is reachable, the API key works, and a brain
 	// is open — so the user sees a problem immediately, not only after clicking
@@ -125,6 +132,33 @@ export function PopupApp() {
 		}
 	}, [tab, settings]);
 
+	// Arm the countdown when we first reach the ready view, if the user
+	// opted in. Cancelling (user interaction) sets autoProceedActive to
+	// false; transitioning away from ready unmounts the firing effect.
+	useEffect(() => {
+		if(view.kind === "ready" && settings?.autoProceed) {
+			setAutoProceedActive(true);
+		}
+	}, [view.kind, settings?.autoProceed]);
+
+	useEffect(() => {
+		if(view.kind !== "ready" || !autoProceedActive) return;
+		const timer = window.setTimeout(() => {
+			setAutoProceedActive(false);
+			handleSend();
+		}, AUTO_PROCEED_MS);
+		const cancel = () => setAutoProceedActive(false);
+		// Capture phase so a click on Send isn't swallowed — the button's own
+		// onClick still runs, but the countdown-driven send is suppressed.
+		window.addEventListener("pointerdown", cancel, true);
+		window.addEventListener("keydown", cancel, true);
+		return () => {
+			window.clearTimeout(timer);
+			window.removeEventListener("pointerdown", cancel, true);
+			window.removeEventListener("keydown", cancel, true);
+		};
+	}, [view.kind, autoProceedActive, handleSend]);
+
 	const handleTrimChange = useCallback(
 		async (trimQueryParams: boolean) => {
 			await updateSettings({ trimQueryParams });
@@ -195,6 +229,7 @@ export function PopupApp() {
 					trimExceptions={settings.trimQueryParamsExceptions}
 					onTrimChange={handleTrimChange}
 					onSend={handleSend}
+					autoProceedActive={autoProceedActive}
 				/>
 			)}
 			{view.kind === "sending" && tab && <SendingCard tab={tab} />}
@@ -243,6 +278,7 @@ function ReadyCard({
 	trimExceptions,
 	onTrimChange,
 	onSend,
+	autoProceedActive,
 }: {
 	tab: ActiveTab;
 	activeThought: ActiveThought;
@@ -252,7 +288,21 @@ function ReadyCard({
 	trimExceptions: string[];
 	onTrimChange: (value: boolean) => void;
 	onSend: () => void;
+	autoProceedActive: boolean;
 }) {
+	// Two-pass render so the bar animates: start at 100%, then flip to 0%
+	// on the next frame and let the CSS transition run. Remount (via key)
+	// when the countdown arms so it always starts full.
+	const [barWidth, setBarWidth] = useState("100%");
+	useEffect(() => {
+		if(!autoProceedActive) {
+			setBarWidth("100%");
+			return;
+		}
+		setBarWidth("100%");
+		const id = requestAnimationFrame(() => setBarWidth("0%"));
+		return () => cancelAnimationFrame(id);
+	}, [autoProceedActive]);
 	const isException = isTrimException(tab.url, trimExceptions);
 	const showTrimOption = hasQueryOrHash(tab.url) && !isException;
 	const previewUrl = showTrimOption && trimQueryParams ? stripQueryAndHash(tab.url) : tab.url;
@@ -264,7 +314,7 @@ function ReadyCard({
 		<Card>
 			<CardHeader>
 				<CardTitle className="text-base">{stripUnreadCountPrefix(tab.title) || tab.url}</CardTitle>
-				<p className="truncate text-xs text-muted-foreground">{previewUrl}</p>
+				<p className="break-all text-xs text-muted-foreground">{previewUrl}</p>
 			</CardHeader>
 			<CardContent className="flex flex-col gap-3 pt-0">
 				<div className="text-xs text-muted-foreground">
@@ -287,10 +337,30 @@ function ReadyCard({
 					</label>
 				)}
 			</CardContent>
-			<CardFooter>
+			<CardFooter className="flex-col items-stretch gap-2">
 				<Button onClick={onSend} className="w-full min-w-0" title={sendLabel}>
 					<span className="min-w-0 truncate">{sendLabel}</span>
 				</Button>
+				{autoProceedActive && (
+					<>
+						<p className="text-center text-xs text-muted-foreground">
+							Sending automatically — click anywhere to cancel.
+						</p>
+						<div
+							className="h-1 w-full overflow-hidden rounded-full bg-muted"
+							aria-hidden
+						>
+							<div
+								className="h-full bg-brand ease-linear"
+								style={{
+									width: barWidth,
+									transitionProperty: "width",
+									transitionDuration: `${AUTO_PROCEED_MS}ms`,
+								}}
+							/>
+						</div>
+					</>
+				)}
 			</CardFooter>
 		</Card>
 	);

@@ -194,6 +194,21 @@ export function OptionsApp() {
 						title="Attach to the active thought"
 						description="Adds the page URL as an attachment on the currently active thought."
 					/>
+					<label className="flex items-center gap-3 text-sm">
+						<input
+							type="checkbox"
+							checked={settings.autoProceed}
+							onChange={(e) => persist({ autoProceed: e.target.checked })}
+							className="h-4 w-4 accent-brand"
+						/>
+						<span>
+							Automatically proceed after 3 seconds
+							<span className="block text-xs text-muted-foreground">
+								Shows a countdown in the popup and sends without a click.
+								Any interaction (click, key press) cancels the countdown.
+							</span>
+						</span>
+					</label>
 				</CardContent>
 			</Card>
 
@@ -201,7 +216,7 @@ export function OptionsApp() {
 				<CardHeader>
 					<CardTitle>After sending</CardTitle>
 				</CardHeader>
-				<CardContent>
+				<CardContent className="flex flex-col gap-3">
 					<label className="flex items-center gap-3 text-sm">
 						<input
 							type="checkbox"
