@@ -12,7 +12,16 @@ export interface Settings {
 	mode: SendMode;
 	activateAfterSend: boolean;
 	trimQueryParams: boolean;
+	// Hostnames where query params/fragments must be preserved even when
+	// trimQueryParams is on, because the query carries page identity (e.g.
+	// YouTube's ?v=VIDEO_ID). Entries are bare hostnames; subdomains match.
+	trimQueryParamsExceptions: string[];
 }
+
+export const DEFAULT_TRIM_EXCEPTIONS: readonly string[] = [
+	"youtube.com",
+	"youtu.be",
+];
 
 const DEFAULTS: Settings = {
 	apiKey: "",
@@ -20,6 +29,7 @@ const DEFAULTS: Settings = {
 	mode: "createChild",
 	activateAfterSend: true,
 	trimQueryParams: false,
+	trimQueryParamsExceptions: [...DEFAULT_TRIM_EXCEPTIONS],
 };
 
 const KEYS: (keyof Settings)[] = [
@@ -28,6 +38,7 @@ const KEYS: (keyof Settings)[] = [
 	"mode",
 	"activateAfterSend",
 	"trimQueryParams",
+	"trimQueryParamsExceptions",
 ];
 
 export async function getSettings(): Promise<Settings> {
@@ -47,7 +58,35 @@ export async function getSettings(): Promise<Settings> {
 			typeof stored.trimQueryParams === "boolean"
 				? stored.trimQueryParams
 				: DEFAULTS.trimQueryParams,
+		trimQueryParamsExceptions: Array.isArray(stored.trimQueryParamsExceptions)
+			? (stored.trimQueryParamsExceptions as unknown[]).filter(
+					(v): v is string => typeof v === "string",
+				)
+			: [...DEFAULTS.trimQueryParamsExceptions],
 	};
+}
+
+// Parse a free-form list (newlines or commas) into normalized hostnames.
+// Strips scheme/path/whitespace and lowercases. Used by the options UI.
+export function parseExceptionList(input: string): string[] {
+	const seen = new Set<string>();
+	const out: string[] = [];
+	for(const raw of input.split(/[\s,]+/)) {
+		const trimmed = raw.trim().toLowerCase();
+		if(trimmed.length === 0) continue;
+		// Tolerate users pasting full URLs.
+		let host = trimmed;
+		try {
+			const withScheme = /^[a-z]+:\/\//.test(trimmed) ? trimmed : `http://${trimmed}`;
+			host = new URL(withScheme).hostname;
+		} catch {
+			// Fall back to the raw token.
+		}
+		if(host.length === 0 || seen.has(host)) continue;
+		seen.add(host);
+		out.push(host);
+	}
+	return out;
 }
 
 export async function updateSettings(patch: Partial<Settings>): Promise<void> {

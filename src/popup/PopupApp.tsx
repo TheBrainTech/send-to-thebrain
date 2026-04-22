@@ -10,8 +10,9 @@ import { Spinner } from "../components/Spinner";
 import { tabs, runtime, type ActiveTab } from "../lib/browser";
 import { DEFAULT_ENDPOINT, isValidEndpoint } from "../lib/endpoint";
 import { sendToBrain, type SendOutcome } from "../lib/sendToBrain";
+import { stripUnreadCountPrefix } from "../lib/titleSplit";
 import { getSettings, updateSettings, type SendMode, type Settings } from "../lib/settings";
-import { hasQueryOrHash, stripQueryAndHash } from "../lib/urlTrim";
+import { hasQueryOrHash, isTrimException, stripQueryAndHash } from "../lib/urlTrim";
 
 interface ActiveThought {
 	id: string;
@@ -100,9 +101,10 @@ export function PopupApp() {
 			apiKey: settings.apiKey,
 			endpoint: settings.endpoint,
 		});
-		const effectiveUrl = settings.trimQueryParams
-			? stripQueryAndHash(tab.url)
-			: tab.url;
+		const trimAllowed =
+			settings.trimQueryParams &&
+			!isTrimException(tab.url, settings.trimQueryParamsExceptions);
+		const effectiveUrl = trimAllowed ? stripQueryAndHash(tab.url) : tab.url;
 		try {
 			const outcome = await sendToBrain({
 				client,
@@ -190,6 +192,7 @@ export function PopupApp() {
 					mode={settings.mode}
 					onModeChange={handleModeChange}
 					trimQueryParams={settings.trimQueryParams}
+					trimExceptions={settings.trimQueryParamsExceptions}
 					onTrimChange={handleTrimChange}
 					onSend={handleSend}
 				/>
@@ -237,6 +240,7 @@ function ReadyCard({
 	mode,
 	onModeChange,
 	trimQueryParams,
+	trimExceptions,
 	onTrimChange,
 	onSend,
 }: {
@@ -245,10 +249,12 @@ function ReadyCard({
 	mode: SendMode;
 	onModeChange: (mode: SendMode) => void;
 	trimQueryParams: boolean;
+	trimExceptions: string[];
 	onTrimChange: (value: boolean) => void;
 	onSend: () => void;
 }) {
-	const showTrimOption = hasQueryOrHash(tab.url);
+	const isException = isTrimException(tab.url, trimExceptions);
+	const showTrimOption = hasQueryOrHash(tab.url) && !isException;
 	const previewUrl = showTrimOption && trimQueryParams ? stripQueryAndHash(tab.url) : tab.url;
 	const sendLabel =
 		mode === "createChild"
@@ -257,7 +263,7 @@ function ReadyCard({
 	return (
 		<Card>
 			<CardHeader>
-				<CardTitle className="text-base">{tab.title || tab.url}</CardTitle>
+				<CardTitle className="text-base">{stripUnreadCountPrefix(tab.title) || tab.url}</CardTitle>
 				<p className="truncate text-xs text-muted-foreground">{previewUrl}</p>
 			</CardHeader>
 			<CardContent className="flex flex-col gap-3 pt-0">
@@ -282,8 +288,8 @@ function ReadyCard({
 				)}
 			</CardContent>
 			<CardFooter>
-				<Button onClick={onSend} className="w-full truncate">
-					{sendLabel}
+				<Button onClick={onSend} className="w-full min-w-0" title={sendLabel}>
+					<span className="min-w-0 truncate">{sendLabel}</span>
 				</Button>
 			</CardFooter>
 		</Card>
@@ -329,7 +335,7 @@ function SendingCard({ tab }: { tab: ActiveTab }) {
 	return (
 		<Card>
 			<CardHeader>
-				<CardTitle className="text-base">{tab.title || tab.url}</CardTitle>
+				<CardTitle className="text-base">{stripUnreadCountPrefix(tab.title) || tab.url}</CardTitle>
 			</CardHeader>
 			<CardContent className="flex items-center gap-2 text-sm text-muted-foreground">
 				<Spinner />
@@ -483,7 +489,7 @@ function SetupView({ onComplete }: SetupViewProps) {
 						<Input
 							type="text"
 							autoComplete="off"
-							placeholder="http://localhost:5000/api/"
+							placeholder="http://localhost:8001/api/"
 							value={endpoint}
 							onChange={(e) => setEndpoint(e.target.value)}
 						/>

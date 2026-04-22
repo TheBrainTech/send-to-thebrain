@@ -8,7 +8,13 @@ import { Input } from "../components/Input";
 import { Logo } from "../components/Logo";
 import { Spinner } from "../components/Spinner";
 import { isValidEndpoint } from "../lib/endpoint";
-import { getSettings, updateSettings, type SendMode, type Settings } from "../lib/settings";
+import {
+	getSettings,
+	parseExceptionList,
+	updateSettings,
+	type SendMode,
+	type Settings,
+} from "../lib/settings";
 
 type TestResult =
 	| { kind: "idle" }
@@ -23,12 +29,14 @@ export function OptionsApp() {
 	const [showKey, setShowKey] = useState(false);
 	const [test, setTest] = useState<TestResult>({ kind: "idle" });
 	const [saved, setSaved] = useState(false);
+	const [exceptionsText, setExceptionsText] = useState("");
 
 	useEffect(() => {
 		getSettings().then((s) => {
 			setSettings(s);
 			setApiKey(s.apiKey);
 			setEndpoint(s.endpoint);
+			setExceptionsText(s.trimQueryParamsExceptions.join("\n"));
 		});
 	}, []);
 
@@ -84,6 +92,20 @@ export function OptionsApp() {
 		persist({ activateAfterSend });
 	};
 
+	const handleExceptionsBlur = async () => {
+		const parsed = parseExceptionList(exceptionsText);
+		const current = settings.trimQueryParamsExceptions;
+		const same =
+			parsed.length === current.length &&
+			parsed.every((v, i) => v === current[i]);
+		// Re-format the textarea even if unchanged, so the user sees the
+		// normalized list (lowercased, deduped, hostnames only).
+		setExceptionsText(parsed.join("\n"));
+		if(!same) {
+			await persist({ trimQueryParamsExceptions: parsed });
+		}
+	};
+
 	return (
 		<div className="mx-auto flex max-w-xl flex-col gap-6 p-6">
 			<header className="flex items-center gap-3">
@@ -109,7 +131,7 @@ export function OptionsApp() {
 							type="text"
 							value={endpoint}
 							onChange={(e) => setEndpoint(e.target.value)}
-							placeholder="http://localhost:5000/api/"
+							placeholder="http://localhost:8001/api/"
 							autoComplete="off"
 						/>
 					</label>
@@ -193,6 +215,32 @@ export function OptionsApp() {
 								Navigates TheBrain to the thought after it's saved.
 							</span>
 						</span>
+					</label>
+				</CardContent>
+			</Card>
+
+			<Card>
+				<CardHeader>
+					<CardTitle>Trim query parameters</CardTitle>
+				</CardHeader>
+				<CardContent className="flex flex-col gap-3">
+					<p className="text-sm text-muted-foreground">
+						The popup offers a checkbox to drop the query string and fragment
+						from the saved URL. List domains here where that checkbox should
+						be hidden — useful for sites like YouTube where the query string
+						(<code>?v=…</code>) identifies the page. Subdomains are matched
+						automatically; one entry per line.
+					</p>
+					<label className="flex flex-col gap-1.5">
+						<span className="text-xs font-medium">Domains to never trim</span>
+						<textarea
+							className="min-h-[6rem] w-full rounded-md border border-border bg-background px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-brand"
+							value={exceptionsText}
+							onChange={(e) => setExceptionsText(e.target.value)}
+							onBlur={handleExceptionsBlur}
+							spellCheck={false}
+							placeholder={"youtube.com\nyoutu.be"}
+						/>
 					</label>
 				</CardContent>
 			</Card>

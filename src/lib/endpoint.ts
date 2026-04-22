@@ -4,7 +4,7 @@
 // `http://localhost:52341` or `http://localhost:52341/api` without making the
 // user trim by hand.
 
-export const DEFAULT_ENDPOINT = "http://localhost:5000/api/";
+export const DEFAULT_ENDPOINT = "http://localhost:8001/api/";
 
 export function normalizeEndpoint(raw: string): string {
 	const trimmed = raw.trim();

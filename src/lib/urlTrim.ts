@@ -20,3 +20,23 @@ export function stripQueryAndHash(url: string): string {
 		return url;
 	}
 }
+
+// Returns true if `url`'s hostname matches any entry in `exceptions`.
+// An entry matches the hostname itself or any subdomain of it (so
+// "youtube.com" matches "m.youtube.com" and "music.youtube.com").
+export function isTrimException(url: string, exceptions: readonly string[]): boolean {
+	let host: string;
+	try {
+		host = new URL(url).hostname.toLowerCase();
+	} catch {
+		return false;
+	}
+	for(const entry of exceptions) {
+		const e = entry.trim().toLowerCase();
+		if(e.length === 0) continue;
+		if(host === e || host.endsWith(`.${e}`)) {
+			return true;
+		}
+	}
+	return false;
+}

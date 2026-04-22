@@ -40,6 +40,10 @@ const REVERSE_SPLITTERS: readonly string[] = [": "];
 // count does not end up in the thought name.
 const UNREAD_COUNT_PREFIX = /^\s*\(\d+\)\s*/;
 
+export function stripUnreadCountPrefix(title: string): string {
+	return title.replace(UNREAD_COUNT_PREFIX, "");
+}
+
 function normalize(title: string): string {
 	return title.replace(/\u00A0/g, " ").replace(UNREAD_COUNT_PREFIX, "");
 }
