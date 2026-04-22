@@ -43,6 +43,7 @@ export function PopupApp() {
 	const [activeThought, setActiveThought] = useState<ActiveThought | null>(null);
 	const [view, setView] = useState<ViewState>({ kind: "loading" });
 	const [autoProceedActive, setAutoProceedActive] = useState(false);
+	const [successAutoCloseActive, setSuccessAutoCloseActive] = useState(true);
 
 	// Verify that the desktop app is reachable, the API key works, and a brain
 	// is open — so the user sees a problem immediately, not only after clicking
@@ -172,14 +173,29 @@ export function PopupApp() {
 		setSettings((prev) => (prev ? { ...prev, mode } : prev));
 	}, []);
 
-	// Auto-dismiss the popup after a successful save so it feels like a
-	// one-click action. If the user wants to interact ("Open in TheBrain"),
-	// they have a brief window before the popup closes.
+	// Arm the auto-close every time we enter the success view.
 	useEffect(() => {
-		if(view.kind !== "success") return;
-		const id = window.setTimeout(() => window.close(), AUTO_CLOSE_MS);
-		return () => window.clearTimeout(id);
+		if(view.kind === "success") {
+			setSuccessAutoCloseActive(true);
+		}
 	}, [view.kind]);
+
+	// Auto-dismiss the popup after a successful save so it feels like a
+	// one-click action. Any interaction (click, key press) inside the popup
+	// cancels the auto-close so the user can read the message or click
+	// "Open in TheBrain" without fighting the timer.
+	useEffect(() => {
+		if(view.kind !== "success" || !successAutoCloseActive) return;
+		const id = window.setTimeout(() => window.close(), AUTO_CLOSE_MS);
+		const cancel = () => setSuccessAutoCloseActive(false);
+		window.addEventListener("pointerdown", cancel, true);
+		window.addEventListener("keydown", cancel, true);
+		return () => {
+			window.clearTimeout(id);
+			window.removeEventListener("pointerdown", cancel, true);
+			window.removeEventListener("keydown", cancel, true);
+		};
+	}, [view.kind, successAutoCloseActive]);
 
 	const handleSetupComplete = useCallback(async (apiKey: string, endpoint: string) => {
 		await updateSettings({ apiKey, endpoint });
@@ -240,6 +256,7 @@ export function PopupApp() {
 						view.client.activateThought(view.outcome.brainId, view.outcome.thoughtId)
 					}
 					onReset={() => setView({ kind: "ready" })}
+					autoCloseActive={successAutoCloseActive}
 				/>
 			)}
 			{view.kind === "error" && (
@@ -264,6 +281,25 @@ function Header() {
 				onClick={() => runtime.openOptionsPage()}
 			>
 				Settings
+			</button>
+			<button
+				type="button"
+				className="flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground hover:bg-secondary hover:text-foreground"
+				onClick={() => window.close()}
+				aria-label="Close"
+				title="Close"
+			>
+				<svg
+					viewBox="0 0 16 16"
+					aria-hidden="true"
+					className="h-3.5 w-3.5"
+					fill="none"
+					stroke="currentColor"
+					strokeWidth="2"
+					strokeLinecap="round"
+				>
+					<path d="M3 3 L13 13 M13 3 L3 13" />
+				</svg>
 			</button>
 		</div>
 	);
@@ -419,10 +455,12 @@ function SuccessCard({
 	outcome,
 	onOpen,
 	onReset: _onReset,
+	autoCloseActive,
 }: {
 	outcome: SendOutcome;
 	onOpen: () => void;
 	onReset: () => void;
+	autoCloseActive: boolean;
 }) {
 	const title =
 		outcome.kind === "created"
@@ -438,11 +476,13 @@ function SuccessCard({
 				: `Found existing thought "${outcome.thoughtName}".`;
 	// Two-pass render so the bar animates: start at 100%, then on the next
 	// paint flip to 0% and let the CSS transition run over AUTO_CLOSE_MS.
+	// If the user cancels the auto-close, hide the bar entirely.
 	const [barWidth, setBarWidth] = useState("100%");
 	useEffect(() => {
+		if(!autoCloseActive) return;
 		const id = requestAnimationFrame(() => setBarWidth("0%"));
 		return () => cancelAnimationFrame(id);
-	}, []);
+	}, [autoCloseActive]);
 	return (
 		<>
 			<Alert variant="success" title={title}>
@@ -451,20 +491,22 @@ function SuccessCard({
 			<Button variant="secondary" onClick={onOpen}>
 				Open in TheBrain
 			</Button>
-			<div
-				className="h-1 w-full overflow-hidden rounded-full bg-muted"
-				aria-hidden
-				title="Closing shortly"
-			>
+			{autoCloseActive && (
 				<div
-					className="h-full bg-success ease-linear"
-					style={{
-						width: barWidth,
-						transitionProperty: "width",
-						transitionDuration: `${AUTO_CLOSE_MS}ms`,
-					}}
-				/>
-			</div>
+					className="h-1 w-full overflow-hidden rounded-full bg-muted"
+					aria-hidden
+					title="Closing shortly"
+				>
+					<div
+						className="h-full bg-success ease-linear"
+						style={{
+							width: barWidth,
+							transitionProperty: "width",
+							transitionDuration: `${AUTO_CLOSE_MS}ms`,
+						}}
+					/>
+				</div>
+			)}
 		</>
 	);
 }
