@@ -14,14 +14,22 @@ build-time magic beyond `@crxjs/vite-plugin`.
   **Create child / Attach** toggle so you can decide per-send which mode to
   use — the choice is remembered.
 - Splits titles like `"Apple Inc | Wikipedia"` into name + label using the
-  same separator rules the desktop clients use.
+  same separator rules the desktop clients use, and strips leading
+  unread-count prefixes like `"(19) "` that sites like Gmail, YouTube, and
+  Substack inject into the document title.
 - Attaches the URL to the thought with the page title as the attachment
   name.
 - De-dupes via the local API's `by-location` endpoint: if the URL is already
   attached anywhere in the current brain, the extension activates that
   thought instead of creating a duplicate.
 - Optional per-send checkbox (only shown when applicable) to strip query
-  parameters and fragments before saving.
+  parameters and fragments before saving. A configurable **domain
+  exception list** (defaults: `youtube.com`, `youtu.be`) keeps the query
+  string intact on sites where it carries page identity.
+- Optional **"Automatically proceed after 3 seconds"** setting: the popup
+  arms a countdown and sends without a click. Any interaction (click or
+  key press) cancels the countdown.
+- Close (×) button in the popup header to dismiss at any time.
 - Connectivity, API key, and "a brain is open" are all verified the moment
   the popup opens, so errors surface immediately rather than after a click.
 - Clear messages for the common "why did nothing happen?" cases:
@@ -31,9 +39,11 @@ build-time magic beyond `@crxjs/vite-plugin`.
   - Brain is read-only
 - Auto-dismisses 3 seconds after a successful save, with a shrinking
   progress bar so you can see it coming (and still click "Open in
-  TheBrain" if you want to jump straight to the new thought).
+  TheBrain" if you want to jump straight to the new thought). Clicking
+  or pressing a key inside the popup cancels the auto-dismiss.
 - Options page for updating the endpoint / API key and setting defaults
-  for the send mode and post-save activation.
+  for the send mode, post-save activation, auto-proceed, and the list of
+  domains exempt from query-param trimming.
 
 ## Getting started
 
@@ -90,17 +100,20 @@ cd ~/Desktop/send-to-thebrain-main          # macOS / Linux
 cd %USERPROFILE%\Desktop\send-to-thebrain-main   # Windows PowerShell
 ```
 
-Then run these three commands, one at a time:
+Then run these two commands, one at a time:
 
 ```bash
 npm install      # downloads the libraries this project depends on
-npm run icons    # generates the toolbar icon PNGs from the logo
 npm run build    # produces the finished extension in a new "dist" folder
 ```
 
 The first command can take a minute or two the first time — it's fetching
-everything the project needs. When all three finish without errors, you'll
-have a `dist/` folder inside your project folder. That's the extension.
+everything the project needs. When both finish without errors, you'll have
+a `dist/` folder inside your project folder. That's the extension.
+
+> The toolbar icon PNGs are committed in `public/icons/`, so you don't need
+> to regenerate them. If you change `public/logo.svg` and want to refresh
+> the PNGs, run `npm run icons`.
 
 ### 4. Load the extension into your browser
 
@@ -150,12 +163,13 @@ Runs the Vitest suite, which covers:
 
 - `titleSplit.test.ts` — page-title → `{ name, label }` splitter behaviour
   across all the supported separators (pipe, dash, em-dash, reverse colon,
-  non-breaking space, etc.).
+  non-breaking space, etc.), plus leading unread-count prefix stripping.
 - `endpoint.test.ts` — normalization of the pasted API endpoint
   (with/without scheme, trailing slash, `/api` suffix) into the base URL
   the client actually calls.
 - `urlTrim.test.ts` — detection and stripping of query parameters and
-  fragments used by the per-send "Remove query parameters" checkbox.
+  fragments used by the per-send "Remove query parameters" checkbox,
+  plus the domain-exception matcher (exact host + subdomain).
 
 ## Project layout
 

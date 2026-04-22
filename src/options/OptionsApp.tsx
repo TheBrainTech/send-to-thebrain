@@ -24,9 +24,11 @@ type TestResult =
 
 export function OptionsApp() {
 	const [settings, setSettings] = useState<Settings | null>(null);
+	// Deliberately never populated from storage: the stored API key must not be
+	// displayed, copied, or otherwise retrievable from this page. The field
+	// only holds a replacement value the user is currently typing.
 	const [apiKey, setApiKey] = useState("");
 	const [endpoint, setEndpoint] = useState("");
-	const [showKey, setShowKey] = useState(false);
 	const [test, setTest] = useState<TestResult>({ kind: "idle" });
 	const [saved, setSaved] = useState(false);
 	const [exceptionsText, setExceptionsText] = useState("");
@@ -34,7 +36,6 @@ export function OptionsApp() {
 	useEffect(() => {
 		getSettings().then((s) => {
 			setSettings(s);
-			setApiKey(s.apiKey);
 			setEndpoint(s.endpoint);
 			setExceptionsText(s.trimQueryParamsExceptions.join("\n"));
 		});
@@ -55,20 +56,31 @@ export function OptionsApp() {
 		setTimeout(() => setSaved(false), 1500);
 	};
 
+	const hasStoredKey = settings.apiKey.length > 0;
+	const typedKey = apiKey.trim();
+	// Use whatever the user typed; if they left the field blank and a key is
+	// already stored, fall back to the stored one for Test / Save.
+	const effectiveKey = typedKey.length > 0 ? typedKey : settings.apiKey;
+
 	const canSave =
-		apiKey.trim().length > 0 &&
+		effectiveKey.length > 0 &&
 		isValidEndpoint(endpoint) &&
-		(apiKey.trim() !== settings.apiKey || endpoint.trim() !== settings.endpoint);
+		(typedKey.length > 0 || endpoint.trim() !== settings.endpoint);
 
 	const handleSave = async () => {
-		await persist({ apiKey: apiKey.trim(), endpoint: endpoint.trim() });
+		const patch: Partial<Settings> = { endpoint: endpoint.trim() };
+		if(typedKey.length > 0) {
+			patch.apiKey = typedKey;
+		}
+		await persist(patch);
+		setApiKey("");
 	};
 
 	const handleTest = async () => {
 		setTest({ kind: "testing" });
 		try {
 			const client = new TheBrainLocalClient({
-				apiKey: apiKey.trim(),
+				apiKey: effectiveKey,
 				endpoint: endpoint.trim(),
 			});
 			const brains = await client.getBrains();
@@ -82,6 +94,12 @@ export function OptionsApp() {
 						: "Could not connect.";
 			setTest({ kind: "error", message });
 		}
+	};
+
+	const handleClearKey = async () => {
+		await persist({ apiKey: "" });
+		setApiKey("");
+		setTest({ kind: "idle" });
 	};
 
 	const handleModeChange = (mode: SendMode) => {
@@ -139,22 +157,30 @@ export function OptionsApp() {
 						<span className="text-xs font-medium">API key</span>
 						<div className="flex gap-2">
 							<Input
-								type={showKey ? "text" : "password"}
+								type="password"
 								value={apiKey}
 								onChange={(e) => setApiKey(e.target.value)}
-								placeholder="Paste your key"
+								placeholder={hasStoredKey ? "Paste a new key to replace" : "Paste your key"}
 								autoComplete="off"
+								spellCheck={false}
 							/>
-							<Button variant="ghost" onClick={() => setShowKey((v) => !v)}>
-								{showKey ? "Hide" : "Show"}
-							</Button>
+							{hasStoredKey && (
+								<Button variant="ghost" onClick={handleClearKey} title="Forget the stored API key">
+									Clear
+								</Button>
+							)}
 						</div>
+						<span className="text-xs text-muted-foreground">
+							{hasStoredKey
+								? "A key is saved. It cannot be viewed or copied from this page — paste a new one to replace it."
+								: "No key saved yet."}
+						</span>
 					</label>
 					<div className="flex gap-2">
 						<Button
 							variant="secondary"
 							onClick={handleTest}
-							disabled={!apiKey.trim() || !isValidEndpoint(endpoint) || test.kind === "testing"}
+							disabled={!effectiveKey || !isValidEndpoint(endpoint) || test.kind === "testing"}
 						>
 							{test.kind === "testing" ? <Spinner /> : "Test connection"}
 						</Button>
