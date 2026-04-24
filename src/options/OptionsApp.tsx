@@ -140,8 +140,16 @@ export function OptionsApp() {
 				</CardHeader>
 				<CardContent className="flex flex-col gap-3">
 					<p className="text-sm text-muted-foreground">
-						Copy both values from the TheBrain desktop app &rarr; Settings &rarr;
-						User &rarr; Local API.
+						Copy both values from{" "}
+						<a
+							href="https://thebrain.com/download"
+							target="_blank"
+							rel="noreferrer"
+							className="text-brand underline underline-offset-2 hover:no-underline"
+						>
+							TheBrain's desktop app
+						</a>{" "}
+						&rarr; Settings &rarr; User &rarr; Local API.
 					</p>
 					<label className="flex flex-col gap-1.5">
 						<span className="text-xs font-medium">API endpoint</span>

@@ -591,7 +591,18 @@ function SetupView({ onComplete }: SetupViewProps) {
 					<div>
 						<p className="mb-1 font-medium">To connect:</p>
 						<ol className="list-decimal pl-5 text-muted-foreground">
-							<li>Open the TheBrain desktop app.</li>
+							<li>
+								Make sure{" "}
+								<a
+									href="https://thebrain.com/download"
+									target="_blank"
+									rel="noreferrer"
+									className="text-brand underline underline-offset-2 hover:no-underline"
+								>
+									TheBrain's desktop app
+								</a>{" "}
+								is installed and running.
+							</li>
 							<li>Go to Settings &rarr; User &rarr; Local API.</li>
 							<li>Copy the API Endpoint and API Key, and paste them below.</li>
 						</ol>

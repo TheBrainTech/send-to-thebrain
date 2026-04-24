@@ -136,7 +136,7 @@ The extension talks to TheBrain's desktop app over your own computer — nothing
 leaves your machine. You'll copy two short values out of the desktop app and
 paste them into the extension once.
 
-1. Start the TheBrain desktop app.
+1. Make sure [TheBrain's desktop app](https://thebrain.com/download) is installed and running.
 2. Go to **Settings → User → Local API**.
 3. Copy the **API Endpoint** (e.g. `http://localhost:52341/api/`) and your
    **API Key** — both have copy buttons.
