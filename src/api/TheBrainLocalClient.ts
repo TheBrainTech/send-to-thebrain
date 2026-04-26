@@ -12,6 +12,7 @@ import type {
 	CreateThoughtRequest,
 	CreateThoughtResponse,
 	Thought,
+	ThoughtReference,
 } from "./types";
 import { AcType, AttachmentType, LinkRelation, ThoughtKind } from "./types";
 
@@ -99,6 +100,10 @@ export class TheBrainLocalClient {
 		return this.request<Thought>("GET", `/api/thoughts/${brainId}/${thoughtId}`);
 	}
 
+	getPinnedThoughts(brainId: string): Promise<Thought[]> {
+		return this.request<Thought[]>("GET", `/api/thoughts/${brainId}/pins`);
+	}
+
 	findAttachmentsByLocation(
 		brainId: string,
 		location: string,
@@ -116,14 +121,14 @@ export class TheBrainLocalClient {
 
 	createChildThought(
 		brainId: string,
-		parentThoughtId: string,
+		parentThought: ThoughtReference,
 		name: string,
 		label: string,
 	): Promise<CreateThoughtResponse> {
 		const body: CreateThoughtRequest = {
 			name,
 			label: label.length > 0 ? label : null,
-			sourceThoughtId: parentThoughtId,
+			sourceThoughtId: parentThought.id,
 			relation: LinkRelation.Child,
 			kind: ThoughtKind.Normal,
 			typeId: null,
