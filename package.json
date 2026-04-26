@@ -9,6 +9,8 @@
 		"dev": "vite",
 		"icons": "node scripts/generate-icons.mjs",
 		"build": "tsc --noEmit && vite build",
+		"build:chrome": "npm run build",
+		"build:firefox": "npm run build && node scripts/build-firefox.mjs",
 		"test": "vitest run",
 		"test:watch": "vitest"
 	},
