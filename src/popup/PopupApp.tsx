@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { TheBrainLocalClient } from "../api/TheBrainLocalClient";
 import { TheBrainError, NoBrainOpenError } from "../api/errors";
+import type { ThoughtReference } from "../api/types";
 import { Alert } from "../components/Alert";
 import { Button } from "../components/Button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "../components/Card";
@@ -26,6 +27,10 @@ interface ActiveThought {
 	brainName: string | null;
 }
 
+interface ThoughtTarget extends ThoughtReference {
+	source: "active" | "pin";
+}
+
 const AUTO_CLOSE_MS = 3000;
 
 type ViewState =
@@ -41,6 +46,8 @@ export function PopupApp() {
 	const [settings, setSettings] = useState<Settings | null>(null);
 	const [tab, setTab] = useState<ActiveTab | null>(null);
 	const [activeThought, setActiveThought] = useState<ActiveThought | null>(null);
+	const [thoughtTargets, setThoughtTargets] = useState<ThoughtTarget[]>([]);
+	const [selectedTargetIndex, setSelectedTargetIndex] = useState(0);
 	const [view, setView] = useState<ViewState>({ kind: "loading" });
 	const [autoProceedActive, setAutoProceedActive] = useState(false);
 	const [successAutoCloseActive, setSuccessAutoCloseActive] = useState(true);
@@ -61,9 +68,17 @@ export function PopupApp() {
 				name: state.activeThoughtName ?? "active thought",
 				brainName: state.currentBrainName,
 			});
+			const targets = await getThoughtTargets(client, {
+				id: state.activeThoughtId,
+				name: state.activeThoughtName ?? "active thought",
+			}, state.currentBrainId);
+			setThoughtTargets(targets);
+			setSelectedTargetIndex(clampThoughtTargetIndex(s.thoughtTargetIndex, targets));
 			setView({ kind: "ready" });
 		} catch(error) {
 			setActiveThought(null);
+			setThoughtTargets([]);
+			setSelectedTargetIndex(0);
 			const message =
 				error instanceof TheBrainError
 					? error.message
@@ -104,6 +119,15 @@ export function PopupApp() {
 
 	const handleSend = useCallback(async () => {
 		if(!tab || !settings) return;
+		const targetThought = thoughtTargets[selectedTargetIndex];
+		if(!targetThought) {
+			setView({
+				kind: "error",
+				message: "No thought selected as the destination.",
+				recoverable: true,
+			});
+			return;
+		}
 		setView({ kind: "sending" });
 		const client = new TheBrainLocalClient({
 			apiKey: settings.apiKey,
@@ -119,6 +143,7 @@ export function PopupApp() {
 				tabTitle: tab.title,
 				tabUrl: effectiveUrl,
 				mode: settings.mode,
+				targetThought,
 				activateAfterSend: settings.activateAfterSend,
 			});
 			setView({ kind: "success", outcome, client });
@@ -131,7 +156,7 @@ export function PopupApp() {
 						: "Something went wrong.";
 			setView({ kind: "error", message, recoverable: true });
 		}
-	}, [tab, settings]);
+	}, [tab, settings, thoughtTargets, selectedTargetIndex]);
 
 	// Arm the countdown when we first reach the ready view, if the user
 	// opted in. Cancelling (user interaction) sets autoProceedActive to
@@ -171,6 +196,12 @@ export function PopupApp() {
 	const handleModeChange = useCallback(async (mode: SendMode) => {
 		await updateSettings({ mode });
 		setSettings((prev) => (prev ? { ...prev, mode } : prev));
+	}, []);
+
+	const handleTargetChange = useCallback(async (thoughtTargetIndex: number) => {
+		await updateSettings({ thoughtTargetIndex });
+		setSettings((prev) => (prev ? { ...prev, thoughtTargetIndex } : prev));
+		setSelectedTargetIndex(thoughtTargetIndex);
 	}, []);
 
 	// Arm the auto-close every time we enter the success view.
@@ -239,6 +270,9 @@ export function PopupApp() {
 				<ReadyCard
 					tab={tab}
 					activeThought={activeThought}
+					thoughtTargets={thoughtTargets}
+					selectedTargetIndex={selectedTargetIndex}
+					onTargetChange={handleTargetChange}
 					mode={settings.mode}
 					onModeChange={handleModeChange}
 					trimQueryParams={settings.trimQueryParams}
@@ -268,6 +302,42 @@ export function PopupApp() {
 			)}
 		</div>
 	);
+}
+
+async function getThoughtTargets(
+	client: TheBrainLocalClient,
+	activeThought: ThoughtReference,
+	brainId: string,
+): Promise<ThoughtTarget[]> {
+	const activeTarget: ThoughtTarget = {
+		...activeThought,
+		source: "active",
+	};
+	let pins;
+	try {
+		pins = await client.getPinnedThoughts(brainId);
+	} catch(error) {
+		if(error instanceof TheBrainError) {
+			console.warn("[Send to TheBrain] pinned-thought lookup failed:", error);
+			return [activeTarget];
+		}
+		throw error;
+	}
+	const pinTargets = pins
+		.filter((pin) => pin.id !== activeThought.id)
+		.map((pin): ThoughtTarget => ({
+			id: pin.id,
+			name: pin.name || "unnamed thought",
+			source: "pin",
+		}));
+	return [activeTarget, ...pinTargets];
+}
+
+function clampThoughtTargetIndex(index: number, targets: ThoughtTarget[]): number {
+	if(targets.length === 0) {
+		return 0;
+	}
+	return Math.min(Math.max(index, 0), targets.length - 1);
 }
 
 function Header() {
@@ -308,6 +378,9 @@ function Header() {
 function ReadyCard({
 	tab,
 	activeThought,
+	thoughtTargets,
+	selectedTargetIndex,
+	onTargetChange,
 	mode,
 	onModeChange,
 	trimQueryParams,
@@ -318,6 +391,9 @@ function ReadyCard({
 }: {
 	tab: ActiveTab;
 	activeThought: ActiveThought;
+	thoughtTargets: ThoughtTarget[];
+	selectedTargetIndex: number;
+	onTargetChange: (thoughtTargetIndex: number) => void;
 	mode: SendMode;
 	onModeChange: (mode: SendMode) => void;
 	trimQueryParams: boolean;
@@ -342,10 +418,16 @@ function ReadyCard({
 	const isException = isTrimException(tab.url, trimExceptions);
 	const showTrimOption = hasQueryOrHash(tab.url) && !isException;
 	const previewUrl = showTrimOption && trimQueryParams ? stripQueryAndHash(tab.url) : tab.url;
+	const selectedTarget =
+		thoughtTargets[clampThoughtTargetIndex(selectedTargetIndex, thoughtTargets)] ?? {
+			id: activeThought.id,
+			name: activeThought.name,
+			source: "active" as const,
+		};
 	const sendLabel =
 		mode === "createChild"
-			? `Create child of "${activeThought.name}"`
-			: `Attach to "${activeThought.name}"`;
+			? `Create child of "${selectedTarget.name}"`
+			: `Attach to "${selectedTarget.name}"`;
 	return (
 		<Card>
 			<CardHeader>
@@ -360,6 +442,11 @@ function ReadyCard({
 						<span className="text-muted-foreground"> · {activeThought.brainName}</span>
 					)}
 				</div>
+				<ThoughtTargetSelect
+					targets={thoughtTargets}
+					value={clampThoughtTargetIndex(selectedTargetIndex, thoughtTargets)}
+					onChange={onTargetChange}
+				/>
 				<ModeToggle mode={mode} onChange={onModeChange} />
 				{showTrimOption && (
 					<label className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -399,6 +486,35 @@ function ReadyCard({
 				)}
 			</CardFooter>
 		</Card>
+	);
+}
+
+function ThoughtTargetSelect({
+	targets,
+	value,
+	onChange,
+}: {
+	targets: ThoughtTarget[];
+	value: number;
+	onChange: (thoughtTargetIndex: number) => void;
+}) {
+	return (
+		<label className="flex flex-col gap-1.5 text-xs">
+			<span className="font-medium text-foreground">Relate to</span>
+			<select
+				className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+				value={value}
+				onChange={(event) => onChange(Number(event.target.value))}
+			>
+				{targets.map((target, index) => (
+					<option key={`${target.source}:${target.id}`} value={index}>
+						{target.source === "active"
+							? `Active thought "${target.name}"`
+							: `Pin "${target.name}"`}
+					</option>
+				))}
+			</select>
+		</label>
 	);
 }
 
@@ -466,7 +582,7 @@ function SuccessCard({
 		outcome.kind === "created"
 			? "Added to your brain"
 			: outcome.kind === "attached"
-				? "Attached to the active thought"
+				? "Attached to selected thought"
 				: "Already in your brain";
 	const message =
 		outcome.kind === "created"

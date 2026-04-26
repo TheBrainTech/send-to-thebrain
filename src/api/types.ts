@@ -41,6 +41,11 @@ export interface Thought {
 	forgottenDateTime: string | null;
 }
 
+export interface ThoughtReference {
+	id: string;
+	name: string;
+}
+
 export interface Attachment {
 	id: string;
 	brainId: string;

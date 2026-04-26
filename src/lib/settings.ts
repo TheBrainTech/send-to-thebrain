@@ -17,6 +17,7 @@ export interface Settings {
 	// YouTube's ?v=VIDEO_ID). Entries are bare hostnames; subdomains match.
 	trimQueryParamsExceptions: string[];
 	autoProceed: boolean;
+	thoughtTargetIndex: number;
 }
 
 export const AUTO_PROCEED_MS = 3000;
@@ -34,6 +35,7 @@ const DEFAULTS: Settings = {
 	trimQueryParams: false,
 	trimQueryParamsExceptions: [...DEFAULT_TRIM_EXCEPTIONS],
 	autoProceed: false,
+	thoughtTargetIndex: 0,
 };
 
 const KEYS: (keyof Settings)[] = [
@@ -44,6 +46,7 @@ const KEYS: (keyof Settings)[] = [
 	"trimQueryParams",
 	"trimQueryParamsExceptions",
 	"autoProceed",
+	"thoughtTargetIndex",
 ];
 
 export async function getSettings(): Promise<Settings> {
@@ -72,6 +75,12 @@ export async function getSettings(): Promise<Settings> {
 			typeof stored.autoProceed === "boolean"
 				? stored.autoProceed
 				: DEFAULTS.autoProceed,
+		thoughtTargetIndex:
+			typeof stored.thoughtTargetIndex === "number" &&
+			Number.isInteger(stored.thoughtTargetIndex) &&
+			stored.thoughtTargetIndex >= 0
+				? stored.thoughtTargetIndex
+				: DEFAULTS.thoughtTargetIndex,
 	};
 }
 

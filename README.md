@@ -109,7 +109,17 @@ npm run build    # produces the finished extension in a new "dist" folder
 
 The first command can take a minute or two the first time — it's fetching
 everything the project needs. When both finish without errors, you'll have
-a `dist/` folder inside your project folder. That's the extension.
+a `dist/` folder inside your project folder. That's the Chrome / Edge /
+Brave extension.
+
+For Firefox, run this instead of `npm run build`:
+
+```bash
+npm run build:firefox
+```
+
+That creates a separate `dist-firefox/` folder with a Firefox-compatible
+manifest.
 
 > The toolbar icon PNGs are committed in `public/icons/`, so you don't need
 > to regenerate them. If you change `public/logo.svg` and want to refresh
@@ -123,8 +133,12 @@ a `dist/` folder inside your project folder. That's the extension.
 2. Turn on **Developer mode** (toggle in the top-right).
 3. Click **Load unpacked** and choose the `dist/` folder from step 3.
 
-**Firefox:** see [Porting to Firefox / Safari](#porting-to-firefox--safari)
-below.
+**Firefox:**
+
+1. Build with `npm run build:firefox`.
+2. Open `about:debugging#/runtime/this-firefox`.
+3. Click **Load Temporary Add-on...**.
+4. Choose `dist-firefox/manifest.json`.
 
 You'll see the "Send to TheBrain" icon appear in your browser toolbar. Click
 it and the popup will walk you through the one-time connection setup
@@ -192,8 +206,10 @@ so the extension rebuilds on save.
 
 ## Porting to Firefox / Safari
 
-- **Firefox:** `manifest.json` is already MV3-compatible. Run `npx web-ext run
-  -s dist/` after building.
+- **Firefox:** run `npm run build:firefox`, then load
+  `dist-firefox/manifest.json` from `about:debugging`. Firefox MV3 uses
+  `background.scripts`, so the Firefox build rewrites the generated Chrome
+  `background.service_worker` entry accordingly.
 - **Safari:** Use Apple's converter:
   ```
   xcrun safari-web-extension-converter dist/

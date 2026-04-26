@@ -10,6 +10,7 @@ import {
 	TheBrainError,
 } from "../api/errors";
 import type { AppState } from "../api/types";
+import type { ThoughtReference } from "../api/types";
 import type { SendMode } from "./settings";
 import { splitTitle } from "./titleSplit";
 
@@ -18,6 +19,7 @@ export interface SendInput {
 	tabTitle: string;
 	tabUrl: string;
 	mode: SendMode;
+	targetThought: ThoughtReference;
 	activateAfterSend: boolean;
 }
 
@@ -43,10 +45,10 @@ export type SendOutcome =
 	  };
 
 export async function sendToBrain(input: SendInput): Promise<SendOutcome> {
-	const { client, tabTitle, tabUrl, mode, activateAfterSend } = input;
+	const { client, tabTitle, tabUrl, mode, targetThought, activateAfterSend } = input;
 
 	const state = await client.getAppState();
-	if(!state.currentBrainId || !state.activeThoughtId) {
+	if(!state.currentBrainId) {
 		throw new NoBrainOpenError();
 	}
 
@@ -71,7 +73,7 @@ export async function sendToBrain(input: SendInput): Promise<SendOutcome> {
 		if(mode === "createChild") {
 			const created = await client.createChildThought(
 				state.currentBrainId,
-				state.activeThoughtId,
+				targetThought,
 				effectiveName,
 				label,
 			);
@@ -93,18 +95,17 @@ export async function sendToBrain(input: SendInput): Promise<SendOutcome> {
 			};
 		}
 
-		// attachToActive
 		await client.attachUrl(
 			state.currentBrainId,
-			state.activeThoughtId,
+			targetThought.id,
 			tabUrl,
 			attachmentName,
 		);
 		return {
 			kind: "attached",
 			brainId: state.currentBrainId,
-			thoughtId: state.activeThoughtId,
-			thoughtName: state.activeThoughtName ?? "active thought",
+			thoughtId: targetThought.id,
+			thoughtName: targetThought.name,
 		};
 	} catch(error) {
 		// Auth and user-mismatch have already been filtered out in the client.
