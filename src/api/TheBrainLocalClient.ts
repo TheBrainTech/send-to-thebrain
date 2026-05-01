@@ -20,15 +20,30 @@ export interface TheBrainLocalClientOptions {
 	/** Either the bare server origin (`http://localhost:52341`) or the URL shown
 	 *  in the desktop app's Local API widget (`http://localhost:52341/api/`). */
 	endpoint: string;
+	/** Per-request timeout in milliseconds. A short bound is essential because
+	 *  TheBrain's desktop app picks a fresh listening port every session, so the
+	 *  saved endpoint frequently points at a stale port. Without a timeout, the
+	 *  popup can sit on a TCP RST/half-open socket for tens of seconds. */
+	timeoutMs?: number;
 }
+
+export const DEFAULT_REQUEST_TIMEOUT_MS = 4000;
 
 export class TheBrainLocalClient {
 	private readonly apiKey: string;
 	private readonly baseUrl: string;
+	private readonly timeoutMs: number;
 
-	constructor({ apiKey, endpoint }: TheBrainLocalClientOptions) {
+	constructor({ apiKey, endpoint, timeoutMs }: TheBrainLocalClientOptions) {
 		this.apiKey = apiKey;
 		this.baseUrl = normalizeEndpoint(endpoint);
+		this.timeoutMs = timeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
+	}
+
+	/** The normalized origin currently in use (e.g. `http://localhost:52341`).
+	 *  Exposed so callers can record the working port after a successful call. */
+	getBaseUrl(): string {
+		return this.baseUrl;
 	}
 
 	private async request<T>(
@@ -40,7 +55,11 @@ export class TheBrainLocalClient {
 		const headers: Record<string, string> = {
 			Authorization: `Bearer ${this.apiKey}`,
 		};
-		const init: RequestInit = { method, headers };
+		const init: RequestInit = {
+			method,
+			headers,
+			signal: AbortSignal.timeout(this.timeoutMs),
+		};
 		if(body !== undefined) {
 			headers["Content-Type"] = "application/json";
 			init.body = JSON.stringify(body);
@@ -50,7 +69,8 @@ export class TheBrainLocalClient {
 		try {
 			response = await fetch(url, init);
 		} catch {
-			// TypeError from fetch when the local server isn't reachable.
+			// TypeError from fetch when the local server isn't reachable, or
+			// AbortError when our timeout fires (e.g. stale port).
 			throw new NotRunningError();
 		}
 
