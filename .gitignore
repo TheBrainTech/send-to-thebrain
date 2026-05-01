@@ -1,6 +1,8 @@
 node_modules
 dist
+dist-firefox
 .vite
 .DS_Store
 *.log
 send-to-thebrain-*.zip
+*.xpi
