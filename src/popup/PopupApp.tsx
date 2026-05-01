@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { TheBrainLocalClient } from "../api/TheBrainLocalClient";
-import { TheBrainError, NoBrainOpenError } from "../api/errors";
+import {
+	TheBrainError,
+	NoBrainOpenError,
+	NotRunningError,
+	InvalidKeyError,
+} from "../api/errors";
 import { Alert } from "../components/Alert";
 import { Button } from "../components/Button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "../components/Card";
@@ -9,11 +14,17 @@ import { Logo } from "../components/Logo";
 import { Spinner } from "../components/Spinner";
 import { tabs, runtime, type ActiveTab } from "../lib/browser";
 import { DEFAULT_ENDPOINT, isValidEndpoint } from "../lib/endpoint";
+import {
+	buildCandidates,
+	discoverEndpoint,
+	portFromEndpoint,
+} from "../lib/portDiscovery";
 import { sendToBrain, type SendOutcome } from "../lib/sendToBrain";
 import { stripUnreadCountPrefix } from "../lib/titleSplit";
 import {
 	AUTO_PROCEED_MS,
 	getSettings,
+	pushRecentPort,
 	updateSettings,
 	type SendMode,
 	type Settings,
@@ -48,14 +59,38 @@ export function PopupApp() {
 	// Verify that the desktop app is reachable, the API key works, and a brain
 	// is open — so the user sees a problem immediately, not only after clicking
 	// Send. Called on popup open and again when the user hits Try again.
+	//
+	// If the saved endpoint is unreachable (typical: TheBrain restarted and now
+	// listens on a different port), we transparently probe a small set of
+	// candidate ports (last-used + MRU history + a few defaults) and rotate
+	// onto the first one that answers. The new endpoint is persisted so the
+	// next launch starts on the right port.
 	const probeConnection = useCallback(async (s: Settings) => {
 		setView({ kind: "probing" });
+		let effective = s;
+		let client = new TheBrainLocalClient({
+			apiKey: s.apiKey,
+			endpoint: s.endpoint,
+		});
 		try {
-			const client = new TheBrainLocalClient({ apiKey: s.apiKey, endpoint: s.endpoint });
-			const state = await client.getAppState();
+			let state;
+			try {
+				state = await client.getAppState();
+			} catch(error) {
+				if(!(error instanceof NotRunningError)) throw error;
+				const rotated = await tryDiscoverNewPort(s);
+				if(!rotated) throw error;
+				effective = rotated.settings;
+				client = rotated.client;
+				setSettings(rotated.settings);
+				state = await client.getAppState();
+			}
 			if(!state.currentBrainId || !state.activeThoughtId) {
 				throw new NoBrainOpenError();
 			}
+			// Record the working port so future launches start on a known-good
+			// candidate even before the saved endpoint gets refreshed elsewhere.
+			await rememberWorkingPort(effective, client.getBaseUrl());
 			setActiveThought({
 				id: state.activeThoughtId,
 				name: state.activeThoughtName ?? "active thought",
@@ -65,11 +100,13 @@ export function PopupApp() {
 		} catch(error) {
 			setActiveThought(null);
 			const message =
-				error instanceof TheBrainError
-					? error.message
-					: error instanceof Error
+				error instanceof NotRunningError
+					? "TheBrain isn't reachable on any known port. Open the desktop app, copy the Local API URL into Settings, then try again."
+					: error instanceof TheBrainError
 						? error.message
-						: "Could not reach TheBrain.";
+						: error instanceof Error
+							? error.message
+							: "Could not reach TheBrain.";
 			setView({ kind: "error", message, recoverable: true });
 		}
 	}, []);
@@ -268,6 +305,57 @@ export function PopupApp() {
 			)}
 		</div>
 	);
+}
+
+// When the saved endpoint goes silent (typical: TheBrain restarted with a
+// new ephemeral port), fan out to a handful of likely ports in parallel
+// and return a refreshed client + settings if any of them answers. Browser
+// extensions can't enumerate listening sockets the way a PowerShell script
+// can, so this best-effort probe is the closest analogue.
+async function tryDiscoverNewPort(s: Settings): Promise<{
+	client: TheBrainLocalClient;
+	settings: Settings;
+} | null> {
+	const candidates = buildCandidates(s.endpoint, s.recentPorts);
+	if(candidates.length === 0) return null;
+	const result = await discoverEndpoint({
+		apiKey: s.apiKey,
+		candidates,
+	});
+	if(result.winner === null) {
+		// If every candidate that answered did so with 401, the port is
+		// fine but the saved key is stale — surface that explicitly so the
+		// user knows to refresh it instead of chasing port numbers.
+		const auth = result.all.find((r) => r.kind === "auth");
+		if(auth) {
+			throw new InvalidKeyError();
+		}
+		return null;
+	}
+	const newEndpoint = result.winner.origin;
+	const newRecent = pushRecentPort(s.recentPorts, result.winner.port);
+	await updateSettings({ endpoint: newEndpoint, recentPorts: newRecent });
+	const next: Settings = { ...s, endpoint: newEndpoint, recentPorts: newRecent };
+	const client = new TheBrainLocalClient({
+		apiKey: next.apiKey,
+		endpoint: next.endpoint,
+	});
+	return { client, settings: next };
+}
+
+// Push the active port to the front of the MRU list whenever a probe
+// succeeds. We swallow storage errors silently — failing to update the
+// history must never break a working send.
+async function rememberWorkingPort(s: Settings, baseUrl: string): Promise<void> {
+	const port = portFromEndpoint(baseUrl);
+	if(port === null) return;
+	if(s.recentPorts[0] === port) return;
+	const next = pushRecentPort(s.recentPorts, port);
+	try {
+		await updateSettings({ recentPorts: next });
+	} catch(error) {
+		console.warn("[Send to TheBrain] failed to record recent port:", error);
+	}
 }
 
 function Header() {
