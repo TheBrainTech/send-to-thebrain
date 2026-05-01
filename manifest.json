@@ -1,7 +1,7 @@
 {
 	"manifest_version": 3,
 	"name": "Send to TheBrain",
-	"version": "0.1.1",
+	"version": "0.1.2",
 	"description": "Save the current page as a thought in your Brain.",
 	"action": {
 		"default_popup": "src/popup/index.html",

@@ -1,6 +1,6 @@
 {
 	"name": "send-to-thebrain",
-	"version": "0.1.1",
+	"version": "0.1.2",
 	"private": true,
 	"type": "module",
 	"description": "Chrome browser extension that saves the active page into TheBrain via the desktop app's local HTTP API.",
