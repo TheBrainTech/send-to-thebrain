@@ -4,3 +4,7 @@ dist
 .DS_Store
 *.log
 send-to-thebrain-*.zip
+
+# Claude Code local state: worktrees are full checkouts, settings.local.json is per-machine
+.claude/worktrees/
+.claude/settings.local.json
