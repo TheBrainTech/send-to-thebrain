@@ -157,7 +157,7 @@ export function OptionsApp() {
 							type="text"
 							value={endpoint}
 							onChange={(e) => setEndpoint(e.target.value)}
-							placeholder="http://localhost:8001/api/"
+							placeholder="http://localhost:11522/api/"
 							autoComplete="off"
 						/>
 					</label>

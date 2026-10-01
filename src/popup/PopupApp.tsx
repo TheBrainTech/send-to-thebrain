@@ -612,7 +612,7 @@ function SetupView({ onComplete }: SetupViewProps) {
 						<Input
 							type="text"
 							autoComplete="off"
-							placeholder="http://localhost:8001/api/"
+							placeholder="http://localhost:11522/api/"
 							value={endpoint}
 							onChange={(e) => setEndpoint(e.target.value)}
 						/>
